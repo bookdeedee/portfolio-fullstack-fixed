@@ -1,52 +1,66 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"          // <-- ใช้ Postgres บน Render
   url      = env("DATABASE_URL")
 }
 
-// -------------------- Projects --------------------
+/* -------------------- Projects -------------------- */
 model Project {
-  id            String  @id
+  id            String   @id @default(cuid())
   title         String
-  description   String?
-  imageDataUrl  String?
+  description   String?  @db.Text
+  imageDataUrl  String?  @db.Text
   dateISO       String?
   // JSON string ของ string[] เช่น ["React","Node"]
-  tagsText      String?
+  tagsText      String?  @db.Text
   // JSON string ของลิงก์ [{label,url}]
-  linksText     String?
+  linksText     String?  @db.Text
   // เปิด/ปิดการแสดงใน market
-  marketEnabled Boolean @default(false)
+  marketEnabled Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([marketEnabled])
 }
 
-// -------------------- Items (สินค้า) --------------------
+/* -------------------- Items (สินค้า) -------------------- */
 model Item {
-  id            String  @id
+  id            String   @id @default(cuid())
   title         String
-  description   String?
-  imageDataUrl  String?
+  description   String?  @db.Text
+  imageDataUrl  String?  @db.Text
   dateISO       String?
   price         Float?
   // โหมดตลาดซื้อขาย
-  marketEnabled Boolean @default(false)
-  stock         Int     @default(0)
+  marketEnabled Boolean  @default(false)
+  stock         Int      @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // ด้านตรงข้ามของ Order.item
-  orders Order[]
+  orders        Order[]
+
+  @@index([marketEnabled])
 }
 
-// -------------------- Orders (คำสั่งซื้อ) --------------------
+/* -------------------- Orders (คำสั่งซื้อ) -------------------- */
 model Order {
-  id           String   @id
+  id           String   @id @default(cuid())
   itemId       String
   item         Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   qty          Int      @default(1)
+  amount       Float?   // ราคารวม (เผื่อให้ตรง migration เก่า)
   buyerName    String?
   buyerContact String?
   createdAt    DateTime @default(now())
   status       String   @default("new") // new, paid, canceled
-  notes        String?
+  notes        String?  @db.Text
+
+  @@index([itemId])
 }
