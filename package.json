@@ -1,0 +1,23 @@
+{
+  "name": "portfolio-fullstack-fixed",
+  "version": "1.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "seed": "node seed.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:deploy": "prisma migrate deploy",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "dotenv": "^17.2.2",
+    "express": "^4.19.2",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

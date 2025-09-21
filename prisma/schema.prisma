@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------- Projects --------------------
+model Project {
+  id            String  @id
+  title         String
+  description   String?
+  imageDataUrl  String?
+  dateISO       String?
+  // JSON string ของ string[] เช่น ["React","Node"]
+  tagsText      String?
+  // JSON string ของลิงก์ [{label,url}]
+  linksText     String?
+  // เปิด/ปิดการแสดงใน market
+  marketEnabled Boolean @default(false)
+}
+
+// -------------------- Items (สินค้า) --------------------
+model Item {
+  id            String  @id
+  title         String
+  description   String?
+  imageDataUrl  String?
+  dateISO       String?
+  price         Float?
+  // โหมดตลาดซื้อขาย
+  marketEnabled Boolean @default(false)
+  stock         Int     @default(0)
+
+  // ด้านตรงข้ามของ Order.item
+  orders Order[]
+}
+
+// -------------------- Orders (คำสั่งซื้อ) --------------------
+model Order {
+  id           String   @id
+  itemId       String
+  item         Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  qty          Int      @default(1)
+  buyerName    String?
+  buyerContact String?
+  createdAt    DateTime @default(now())
+  status       String   @default("new") // new, paid, canceled
+  notes        String?
+}
