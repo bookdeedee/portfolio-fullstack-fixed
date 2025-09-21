@@ -29,9 +29,11 @@ body{
   margin:0;
   font-family:var(--font);
   color:var(--text);
-  background: radial-gradient(80rem 80rem at -10% -20%, #1a1f38 0%, #0f1220 45%) no-repeat,
-              radial-gradient(50rem 60rem at 120% 10%, #18203a 0%, transparent 60%) no-repeat,
-              var(--bg);
+  overflow-x: hidden; /* กันสกอลล์แนวนอน */
+  background:
+    radial-gradient(80rem 80rem at -10% -20%, #1a1f38 0%, #0f1220 45%) no-repeat,
+    radial-gradient(50rem 60rem at 120% 10%, #18203a 0%, transparent 60%) no-repeat,
+    var(--bg);
 }
 
 /* ========= layout ========= */
@@ -52,6 +54,7 @@ body{
   background:linear-gradient(135deg,#243056,#171b2e);
   border:1px solid rgba(255,255,255,.08);
   box-shadow:0 4px 10px rgba(0,0,0,.35);
+  background-size:cover; background-position:center;
 }
 .title{font-weight:700; letter-spacing:.2px}
 .contact-row{display:flex; align-items:center; gap:10px}
@@ -60,7 +63,8 @@ body{
 .contact-row a{position:relative; width:36px; height:36px; border-radius:10px;
   display:inline-flex; align-items:center; justify-content:center;
   background:var(--panel-2); border:1px solid rgba(255,255,255,.06);
-  transition:.2s transform, .2s background, .2s border-color; text-decoration:none;
+  transition:.2s transform, .2s background, .2s border-color; text-decoration:none; color:#dfe6ff;
+  padding:0 10px; font-weight:700; font-size:13px;
 }
 .contact-row a:hover{transform:translateY(-2px); border-color:rgba(255,255,255,.16)}
 .contact-row a::before{content:""; width:18px; height:18px; display:block; background-size:contain; background-repeat:no-repeat}
@@ -83,7 +87,7 @@ body{
 }
 .profile .avatar{
   width:68px; height:68px; border-radius:50%; background:#202744;
-  border:1px solid rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.06); background-size:cover; background-position:center;
 }
 .profile .title h1{margin:0 0 2px; font-size:20px}
 .profile .title p{margin:0; color:var(--muted); font-size:14px}
@@ -135,7 +139,8 @@ body{
 
 /* ========= grid & cards ========= */
 .grid{
-  display:grid; grid-template-columns:repeat( auto-fill, minmax(280px,1fr) );
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(280px,1fr));
   gap:var(--gap);
 }
 .card{
@@ -145,14 +150,27 @@ body{
   display:flex; flex-direction:column; min-height:100%;
 }
 .card-elevated{transform:translateZ(0)}
-.card-hero{position:relative; padding-top:56.5%; background:#1a213a}
+
+/* รูปให้สูงเท่ากันเสมอ */
+.card-hero{position:relative; background:#1a213a; border-bottom:1px solid rgba(255,255,255,.06); aspect-ratio:16/9;}
 .card-hero img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+@supports not (aspect-ratio: 1){
+  .card-hero{padding-top:56.25%;}
+  .card-hero img{position:absolute; inset:0;}
+}
+
 .skeleton{background:repeating-linear-gradient(90deg,#1c2442 0,#1c2442 8px,#222a48 8px,#222a48 16px)}
 
 .card-body{padding:14px 14px 6px}
 .card-date{color:var(--muted); font-size:12px; margin-bottom:6px}
-.card-title{margin:0 0 6px; font-size:18px}
-.card-desc{color:#d0d7ff; opacity:.9; margin:0 0 10px; font-size:14px; line-height:1.5}
+.card-title{
+  margin:0 0 6px; font-size:18px; line-height:1.35;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.card-desc{
+  color:#d0d7ff; opacity:.9; margin:0 0 10px; font-size:14px; line-height:1.5;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
 
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chip{

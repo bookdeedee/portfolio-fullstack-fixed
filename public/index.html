@@ -4,22 +4,27 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>My Portfolio</title>
+
+    <!-- ฟอนต์ (ทางเลือก): Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="/index.css" />
 
-    <!-- Import Map: ให้เบราว์เซอร์รู้จัก react/react-dom แบบ ESM -->
+    <!-- React via ESM -->
     <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.3.1",
-        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.3.1",
+          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+        }
       }
-    }
     </script>
 
-    <!-- กัน favicon 404 (จะใช้ไฟล์จริงก็ได้) -->
     <link rel="icon" href="data:image/x-icon;base64,AA==" />
   </head>
-  <body class="dark-theme">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.js"></script>
   </body>

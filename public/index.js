@@ -2,9 +2,12 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 const h = React.createElement;
 
+/* ---------- constants ---------- */
+const LINE_OA_ID = '@084ltcnl';
+const LINE_CHAT_URL = 'https://line.me/R/ti/p/%40084ltcnl'; // %40 = @
+
 /* ---------- helpers ---------- */
-const uid = () =>
-  Math.random().toString(36).slice(2) + Date.now().toString(36);
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 const dTH = (iso) =>
   iso
@@ -34,13 +37,13 @@ const toDataURL = (file) =>
     r.readAsDataURL(file);
   });
 
-// อัปโหลดรูปไปที่ /api/upload (ต้องมี x-admin-token)
-async function uploadImage(file, token) {
+// อัปโหลดรูปไปที่ /api/upload (ใช้ cookie auth)
+async function uploadImage(file) {
   const fd = new FormData();
   fd.append('image', file);
   const r = await fetch('/api/upload', {
     method: 'POST',
-    headers: { 'x-admin-token': token || '' },
+    credentials: 'include',
     body: fd,
   });
   if (!r.ok) throw new Error('Upload failed: ' + (await r.text()));
@@ -66,9 +69,11 @@ function App() {
   const [cartOpen, setCartOpen] = React.useState(false);
   const [checkoutOpen, setCheckoutOpen] = React.useState(false);
 
-  // Admin token (จะถูกแนบในทุกคำสั่งที่เขียนข้อมูล)
-  const [adminToken, setAdminToken] = React.useState(load('admin.token', ''));
-  React.useEffect(() => save('admin.token', adminToken), [adminToken]);
+  // Admin auth (JWT cookie)
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [loginOpen, setLoginOpen] = React.useState(false);
+  const [loginEmail, setLoginEmail] = React.useState('');
+  const [loginPassword, setLoginPassword] = React.useState('');
 
   const [profile, setProfile] = React.useState(
     load('profile', {
@@ -78,6 +83,7 @@ function App() {
       links: {
         youtube: 'https://www.youtube.com/@TongDEEMelody',
         facebook: 'https://www.facebook.com/tong.tong.tong.375006',
+        line: LINE_CHAT_URL,
       },
     })
   );
@@ -85,6 +91,24 @@ function App() {
 
   /* ---------- API ---------- */
   const api = {
+    async me() {
+      const r = await fetch('/api/admin/me', { credentials: 'include' });
+      return r.json();
+    },
+    async login(email, password) {
+      const r = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+      if (!r.ok) throw new Error('เข้าสู่ระบบไม่สำเร็จ');
+      return r.json();
+    },
+    async logout() {
+      await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
+    },
+
     async listProjects() {
       const r = await fetch('/api/projects');
       return r.json();
@@ -92,30 +116,29 @@ function App() {
     async createProject(p) {
       const r = await fetch('/api/projects', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': adminToken || '',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(p),
       });
+      if (!r.ok) throw new Error(await r.text());
       return r.json();
     },
     async updateProject(p) {
       const r = await fetch('/api/projects/' + p.id, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': adminToken || '',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(p),
       });
+      if (!r.ok) throw new Error(await r.text());
       return r.json();
     },
     async deleteProject(id) {
-      await fetch('/api/projects/' + id, {
+      const r = await fetch('/api/projects/' + id, {
         method: 'DELETE',
-        headers: { 'x-admin-token': adminToken || '' },
+        credentials: 'include',
       });
+      if (!r.ok) throw new Error(await r.text());
     },
 
     async listItems() {
@@ -125,40 +148,38 @@ function App() {
     async createItem(p) {
       const r = await fetch('/api/items', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': adminToken || '',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(p),
       });
+      if (!r.ok) throw new Error(await r.text());
       return r.json();
     },
     async updateItem(p) {
       const r = await fetch('/api/items/' + p.id, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': adminToken || '',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(p),
       });
+      if (!r.ok) throw new Error(await r.text());
       return r.json();
     },
     async deleteItem(id) {
-      await fetch('/api/items/' + id, {
+      const r = await fetch('/api/items/' + id, {
         method: 'DELETE',
-        headers: { 'x-admin-token': adminToken || '' },
+        credentials: 'include',
       });
+      if (!r.ok) throw new Error(await r.text());
     },
     async toggleMarket(type, id, enabled) {
       const r = await fetch('/api/market/toggle', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': adminToken || '',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ type, id, enabled }),
       });
+      if (!r.ok) throw new Error(await r.text());
       return r.json();
     },
   };
@@ -167,9 +188,14 @@ function App() {
   React.useEffect(() => {
     (async () => {
       try {
-        const [ps, it] = await Promise.all([api.listProjects(), api.listItems()]);
+        const [ps, it, me] = await Promise.all([
+          api.listProjects(),
+          api.listItems(),
+          api.me().catch(() => ({ authenticated: false })),
+        ]);
         setProjects(ps);
         setItems(it);
+        setIsAdmin(!!me.authenticated);
       } finally {
         setLoading(false);
       }
@@ -282,7 +308,6 @@ function App() {
     if (!confirm('ลบรายการนี้?')) return;
     await api.deleteItem(id);
     setItems((v) => v.filter((x) => x.id !== id));
-    // เผื่อติดอยู่ในตะกร้า เอาออกด้วย
     setCart((c) => c.filter((l) => l.id !== id));
     toast('ลบแล้ว');
   }
@@ -326,6 +351,26 @@ function App() {
     setCart([]);
   }
 
+  /* ---------- auth actions ---------- */
+  async function doLogin() {
+    try {
+      await api.login(loginEmail.trim(), loginPassword);
+      setLoginOpen(false);
+      setLoginEmail('');
+      setLoginPassword('');
+      const me = await api.me();
+      setIsAdmin(!!me.authenticated);
+      toast('เข้าสู่ระบบสำเร็จ');
+    } catch (e) {
+      alert(e.message || 'เข้าสู่ระบบไม่สำเร็จ');
+    }
+  }
+  async function doLogout() {
+    await api.logout();
+    setIsAdmin(false);
+    toast('ออกจากระบบแล้ว');
+  }
+
   /* ---------- Header / Profile ---------- */
   const Header = h('div', { className: 'header' }, [
     h('div', { className: 'brand' }, [
@@ -334,7 +379,7 @@ function App() {
         {
           className: 'logo',
           style: profile.avatarDataUrl
-            ? { backgroundImage: `url(${profile.avatarDataUrl})`, backgroundSize: 'cover' }
+            ? { backgroundImage: `url(${profile.avatarDataUrl})` }
             : {},
         },
         null
@@ -360,6 +405,18 @@ function App() {
             title: 'Facebook',
           })
         : null,
+      // LINE OA
+      h(
+        'a',
+        {
+          className: 'line',
+          href: profile.links?.line || LINE_CHAT_URL,
+          target: '_blank',
+          rel: 'noreferrer',
+          title: `LINE ${LINE_OA_ID}`,
+        },
+        'LINE'
+      ),
 
       // ปุ่มตะกร้า
       h(
@@ -368,12 +425,13 @@ function App() {
         ['🛒', cartCount ? h('span', { className: 'badge' }, String(cartCount)) : null]
       ),
 
-      // ปุ่มตั้งค่า
-      h(
-        'button',
-        { className: 'btn', onClick: () => setSettingsOpen(true) },
-        'การตั้งค่า'
-      ),
+      // ปุ่มเข้าสู่ระบบ/ออกจากระบบ และ การตั้งค่า (เฉพาะแอดมิน)
+      isAdmin
+        ? h('button', { className: 'btn', onClick: () => setSettingsOpen(true) }, 'การตั้งค่า')
+        : null,
+      isAdmin
+        ? h('button', { className: 'btn', onClick: doLogout }, 'ออกจากระบบ')
+        : h('button', { className: 'btn', onClick: () => setLoginOpen(true) }, 'เข้าสู่ระบบ'),
     ]),
   ]);
 
@@ -381,7 +439,7 @@ function App() {
     h('div', {
       className: 'avatar',
       style: profile.avatarDataUrl
-        ? { backgroundImage: `url(${profile.avatarDataUrl})`, backgroundSize: 'cover' }
+        ? { backgroundImage: `url(${profile.avatarDataUrl})` }
         : {},
     }),
     h('div', { className: 'title' }, [h('h1', null, profile.name), h('p', null, profile.bio)]),
@@ -460,11 +518,10 @@ function App() {
             githubLink
               ? h('a', { className: 'btn btn-ghost', href: githubLink, target: '_blank', rel: 'noreferrer' }, 'GitHub')
               : null,
-            // ปุ่มลงขาย
-            h('button', { className: 'btn btn-ghost', onClick: () => listProjectToMarket(p) }, 'ลงขาย'),
-            h('button', { className: 'btn btn-ghost', onClick: () => setEditProject(p) }, 'แก้ไข'),
-            h('button', { className: 'btn btn-ghost', onClick: () => delProject(p.id) }, 'ลบ'),
-          ]),
+            isAdmin && h('button', { className: 'btn btn-ghost', onClick: () => listProjectToMarket(p) }, 'ลงขาย'),
+            isAdmin && h('button', { className: 'btn btn-ghost', onClick: () => setEditProject(p) }, 'แก้ไข'),
+            isAdmin && h('button', { className: 'btn btn-ghost', onClick: () => delProject(p.id) }, 'ลบ'),
+          ].filter(Boolean)),
         ]),
       ]);
     })
@@ -493,12 +550,12 @@ function App() {
                 'ดูโปรเจกต์'
               ),
               ' ',
-              h('button', { className: 'btn', onClick: () => listProjectToMarket(p) }, 'ลงขาย'),
+              isAdmin && h('button', { className: 'btn', onClick: () => listProjectToMarket(p) }, 'ลงขาย'),
               ' ',
-              h('button', { className: 'btn', onClick: () => setEditProject(p) }, 'แก้ไข'),
+              isAdmin && h('button', { className: 'btn', onClick: () => setEditProject(p) }, 'แก้ไข'),
               ' ',
-              h('button', { className: 'btn', onClick: () => delProject(p.id) }, 'ลบ'),
-            ]),
+              isAdmin && h('button', { className: 'btn', onClick: () => delProject(p.id) }, 'ลบ'),
+            ].filter(Boolean)),
           ])
         )
       ),
@@ -526,7 +583,6 @@ function App() {
             ]),
           ]),
           h('div', { className: 'card-footer' }, [
-            // ปุ่มหลัก: ซื้อเลย และ ใส่ตะกร้า
             h('div', { className: 'buy-actions' }, [
               h(
                 'button',
@@ -549,11 +605,10 @@ function App() {
                 'ใส่ตะกร้า'
               ),
             ]),
-            // จัดการ (admin)
             h('div', { className: 'card-actions' }, [
-              h('button', { className: 'btn btn-ghost', onClick: () => setEditItem(it) }, 'แก้ไข'),
-              h('button', { className: 'btn btn-ghost', onClick: () => delItem(it.id) }, 'ลบ'),
-            ]),
+              isAdmin && h('button', { className: 'btn btn-ghost', onClick: () => setEditItem(it) }, 'แก้ไข'),
+              isAdmin && h('button', { className: 'btn btn-ghost', onClick: () => delItem(it.id) }, 'ลบ'),
+            ].filter(Boolean)),
           ]),
         ])
       )
@@ -588,10 +643,10 @@ function App() {
                 'ใส่ตะกร้า'
               ),
               ' ',
-              h('button', { className: 'btn', onClick: () => setEditItem(it) }, 'แก้ไข'),
+              isAdmin && h('button', { className: 'btn', onClick: () => setEditItem(it) }, 'แก้ไข'),
               ' ',
-              h('button', { className: 'btn', onClick: () => delItem(it.id) }, 'ลบ'),
-            ]),
+              isAdmin && h('button', { className: 'btn', onClick: () => delItem(it.id) }, 'ลบ'),
+            ].filter(Boolean)),
           ])
         )
       ),
@@ -647,7 +702,7 @@ function App() {
                       onChange: async (e) => {
                         const f = e.target.files?.[0];
                         if (!f) return;
-                        const data = await toDataURL(f); // profile เก็บใน local เพียงพอ
+                        const data = await toDataURL(f);
                         setProfile((p) => ({ ...p, avatarDataUrl: data }));
                       },
                     }),
@@ -674,15 +729,13 @@ function App() {
                 onChange: (e) => setProfile({ ...profile, links: { ...profile.links, facebook: e.target.value } }),
               }),
             ]),
-            // Admin Token
             h('div', { className: 'form-row' }, [
-              h('label', null, 'Admin Token'),
+              h('label', null, `URL ของ LINE (${LINE_OA_ID})`),
               h('input', {
                 className: 'input',
-                type: 'password',
-                placeholder: 'ให้ตรงกับ .env ADMIN_TOKEN',
-                value: adminToken,
-                onChange: (e) => setAdminToken(e.target.value),
+                type: 'url',
+                value: profile.links?.line || LINE_CHAT_URL,
+                onChange: (e) => setProfile({ ...profile, links: { ...profile.links, line: e.target.value } }),
               }),
             ]),
           ]),
@@ -763,7 +816,7 @@ function App() {
                         const f = e.target.files?.[0];
                         if (!f) return;
                         try {
-                          const { url } = await uploadImage(f, adminToken);
+                          const { url } = await uploadImage(f);
                           setEditProject({ ...editProject, imageDataUrl: url });
                         } catch (err) {
                           alert(err.message);
@@ -883,7 +936,7 @@ function App() {
                 editItem.imageDataUrl
                   ? h('img', { className: 'avatar-preview', src: editItem.imageDataUrl, alt: 'preview' })
                   : h('div', { className: 'avatar-preview' }),
-                h('div', { style: { height: 8 } }),
+                h('div', { style: { height: 8 } }), /* <-- แก้บรรทัดนี้ */
                 h(
                   'label',
                   { className: 'file' },
@@ -897,7 +950,7 @@ function App() {
                         const f = e.target.files?.[0];
                         if (!f) return;
                         try {
-                          const { url } = await uploadImage(f, adminToken);
+                          const { url } = await uploadImage(f);
                           setEditItem({ ...editItem, imageDataUrl: url });
                         } catch (err) {
                           alert(err.message);
@@ -909,7 +962,7 @@ function App() {
                 h('button', { className: 'btn', onClick: () => setEditItem({ ...editItem, imageDataUrl: '' }) }, 'ไม่ได้เลือกไฟล์'),
               ]),
             ]),
-          ]),
+          ]), // modal-content
           h('div', { className: 'modal-actions' }, [
             h('button', { className: 'btn', onClick: () => setEditItem(null) }, 'ยกเลิก'),
             h(
@@ -976,52 +1029,65 @@ function App() {
           ),
           h('div', { className: 'modal-actions cart-actions' }, [
             h('div', { className: 'cart-sum' }, 'รวมทั้งหมด: ' + cartTotal.toFixed(2) + ' THB'),
-            h(
-              'div',
-              null,
-              [
-                h('button', { className: 'btn', onClick: clearCart, disabled: !cartLines.length }, 'ล้างตะกร้า'),
-                ' ',
-                h(
-                  'button',
-                  { className: 'btn-primary', onClick: () => setCheckoutOpen(true), disabled: !cartLines.length },
-                  'ชำระเงิน'
-                ),
-              ]
-            ),
+            h('div', null, [
+              h('button', { className: 'btn', onClick: clearCart, disabled: !cartLines.length }, 'ล้างตะกร้า'),
+              ' ',
+              // ปุ่มชำระเงิน -> เปิดแชต LINE
+              h(
+                'a',
+                {
+                  className: 'btn-primary',
+                  href: profile.links?.line || LINE_CHAT_URL,
+                  target: '_blank',
+                  rel: 'noreferrer',
+                },
+                'ชำระเงิน (แชต LINE)'
+              ),
+            ]),
           ]),
         ])
       );
 
   const CheckoutModal = !checkoutOpen
     ? null
+    : null; // ไม่ใช้แล้ว (เราไป LINE โดยตรงจากตะกร้า)
+
+  /* ---------- Login Modal ---------- */
+  const LoginModal = !loginOpen
+    ? null
     : h(
         'div',
         { className: 'modal-overlay' },
         h('div', { className: 'modal' }, [
           h('div', { className: 'modal-header' }, [
-            h('div', { className: 'modal-title' }, 'ชำระเงิน'),
-            h('button', { className: 'btn', onClick: () => setCheckoutOpen(false) }, '✕'),
+            h('div', { className: 'modal-title' }, 'เข้าสู่ระบบแอดมิน'),
+            h('button', { className: 'btn', onClick: () => setLoginOpen(false) }, '✕'),
           ]),
           h('div', { className: 'modal-content' }, [
-            h('p', null, 'ตัวอย่างขั้นตอนชำระเงิน (Demo)'),
-            h('p', null, 'ยอดที่ต้องชำระ: ' + cartTotal.toFixed(2) + ' THB'),
+            h('div', { className: 'form-row' }, [
+              h('label', null, 'อีเมล'),
+              h('input', {
+                className: 'input',
+                type: 'email',
+                value: loginEmail,
+                onChange: (e) => setLoginEmail(e.target.value),
+                placeholder: 'bookdeedee.tong@gmail.com',
+              }),
+            ]),
+            h('div', { className: 'form-row' }, [
+              h('label', null, 'รหัสผ่าน'),
+              h('input', {
+                className: 'input',
+                type: 'password',
+                value: loginPassword,
+                onChange: (e) => setLoginPassword(e.target.value),
+                placeholder: '••••••',
+              }),
+            ]),
           ]),
           h('div', { className: 'modal-actions' }, [
-            h('button', { className: 'btn', onClick: () => setCheckoutOpen(false) }, 'ยกเลิก'),
-            h(
-              'button',
-              {
-                className: 'btn-primary',
-                onClick: () => {
-                  setCheckoutOpen(false);
-                  setCartOpen(false);
-                  clearCart();
-                  toast('ชำระเงินสำเร็จ (เดโม)');
-                },
-              },
-              'ยืนยันการชำระเงิน'
-            ),
+            h('button', { className: 'btn', onClick: () => setLoginOpen(false) }, 'ยกเลิก'),
+            h('button', { className: 'btn-primary', onClick: doLogin }, 'เข้าสู่ระบบ'),
           ]),
         ])
       );
@@ -1036,16 +1102,18 @@ function App() {
       ? ItemCards
       : ItemTable;
 
-  // FAB: อยู่ที่แท็บไหน เปิดฟอร์มนั้น
-  const AddButton = h(
-    'button',
-    {
-      className: 'fab',
-      title: 'เพิ่ม',
-      onClick: () => (tab === 'projects' ? openNewProject() : openNewItem()),
-    },
-    '+'
-  );
+  // FAB: เฉพาะแอดมินเท่านั้นที่เห็นปุ่มเพิ่ม
+  const AddButton =
+    isAdmin &&
+    h(
+      'button',
+      {
+        className: 'fab',
+        title: 'เพิ่ม',
+        onClick: () => (tab === 'projects' ? openNewProject() : openNewItem()),
+      },
+      '+'
+    );
 
   const Toasts = h(
     'div',
@@ -1072,6 +1140,7 @@ function App() {
     ItemModal,
     CartModal,
     CheckoutModal,
+    LoginModal,
     Toasts,
   ]);
 }
