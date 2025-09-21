@@ -4,58 +4,58 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"          // <-- ใช้ Postgres บน Render
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-/* -------------------- Projects -------------------- */
+// -------------------- Projects --------------------
 model Project {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   title         String
-  description   String?  @db.Text
-  imageDataUrl  String?  @db.Text
+  description   String? @db.Text
+  imageDataUrl  String? @db.Text
   dateISO       String?
   // JSON string ของ string[] เช่น ["React","Node"]
-  tagsText      String?  @db.Text
+  tagsText      String? @db.Text
   // JSON string ของลิงก์ [{label,url}]
-  linksText     String?  @db.Text
+  linksText     String? @db.Text
   // เปิด/ปิดการแสดงใน market
-  marketEnabled Boolean  @default(false)
+  marketEnabled Boolean @default(false)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([marketEnabled])
 }
 
-/* -------------------- Items (สินค้า) -------------------- */
+// -------------------- Items (สินค้า) --------------------
 model Item {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   title         String
-  description   String?  @db.Text
-  imageDataUrl  String?  @db.Text
+  description   String? @db.Text
+  imageDataUrl  String? @db.Text
   dateISO       String?
   price         Float?
   // โหมดตลาดซื้อขาย
-  marketEnabled Boolean  @default(false)
-  stock         Int      @default(0)
+  marketEnabled Boolean @default(false)
+  stock         Int     @default(0)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // ด้านตรงข้ามของ Order.item
-  orders        Order[]
+  orders Order[]
 
   @@index([marketEnabled])
 }
 
-/* -------------------- Orders (คำสั่งซื้อ) -------------------- */
+// -------------------- Orders (คำสั่งซื้อ) --------------------
 model Order {
   id           String   @id @default(cuid())
   itemId       String
   item         Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   qty          Int      @default(1)
-  amount       Float?   // ราคารวม (เผื่อให้ตรง migration เก่า)
+  amount       Float? // ราคารวม (ถ้าไม่ใช้ปล่อยว่างได้)
   buyerName    String?
   buyerContact String?
   createdAt    DateTime @default(now())
